@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 
 interface BuyListItem {
   _id: string;
@@ -25,7 +26,6 @@ export default function BuyList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
   const API_URL = import.meta.env.VITE_API_URL;
 
   // Fetch items on mount
@@ -153,42 +153,60 @@ export default function BuyList() {
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-2 py-8 space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Buy List</h1>
-        <p className="text-muted-foreground">Manage components you need to purchase</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Buy List</h1>
+          <p className="text-muted-foreground">Manage components you need to purchase</p>
+        </div>
+        <Button onClick={downloadPDF} variant="neon" className="w-full md:w-auto mt-4 md:mt-0">
+          <Download className="h-4 w-4 mr-2" />
+          Download PDF
+        </Button>
       </div>
-      {/* Main Content */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Add New Item */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Add New Item
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
+
+      {/* Add New Item */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Add New Item
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={e => { e.preventDefault(); addItem(); }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="name-input">Name</Label>
                 <Input
+                  id="name-input"
+                  className="flex-1 min-w-0"
                   placeholder="e.g., Arduino Uno R3"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && addItem()}
                 />
               </div>
-              <div className="w-24">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="quantity-input">Quantity</Label>
                 <Input
+                  id="quantity-input"
+                  className="w-full"
                   type="number"
                   min="1"
                   value={newItemQuantity}
                   onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  placeholder="Qty"
                 />
               </div>
-              <div className="w-32">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="price-input">Price</Label>
                 <Input
+                  id="price-input"
+                  className="w-full"
                   type="number"
                   min="0"
                   step="0.01"
@@ -197,28 +215,33 @@ export default function BuyList() {
                   onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
                 />
               </div>
-              <div className="w-32">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="category-input">Category</Label>
                 <Input
+                  id="category-input"
+                  className="w-full"
                   type="text"
                   placeholder="Category"
                   value={newItemCategory}
                   onChange={(e) => setNewItemCategory(e.target.value)}
                 />
               </div>
-              <Button onClick={addItem} variant="neon">
-                <Plus className="h-4 w-4" />
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <Button type="submit" variant="neon" className="w-full md:w-auto mt-2 md:mt-0">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Pending Items */}
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                Pending Items ({pendingItems.length})
-              </span>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Pending Items <span className="ml-2 text-xs text-muted-foreground">({pendingItems.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -229,144 +252,101 @@ export default function BuyList() {
                 {pendingItems.map((item) => (
                   <div
                     key={item._id}
-                    className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-smooth animate-slide-in"
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-smooth animate-slide-in"
                   >
-                    <Checkbox
-                      checked={item.isCompleted}
-                      onCheckedChange={() => toggleItem(item._id)}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Qty: {item.quantity} • Price: ${item.price} • Category: {item.category} • Added: {item.addedDate}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={item.isCompleted}
+                        onCheckedChange={() => toggleItem(item._id)}
+                      />
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => markAsBought(item)}
-                      className="text-primary hover:text-primary"
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Bought
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteItem(item._id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex-1 w-full">
+                      <h4 className="font-medium text-lg">{item.name}</h4>
+                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
+                        <span>Qty: {item.quantity}</span>
+                        <span>Price: ${item.price}</span>
+                        <span>Category: {item.category}</span>
+                        <span>Added: {item.addedDate}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markAsBought(item)}
+                        className="text-primary hover:text-primary w-full sm:w-auto"
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Bought
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteItem(item._id)}
+                        className="text-destructive hover:text-destructive w-full sm:w-auto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
+
         {/* Completed Items */}
-        {completedItems.length > 0 && (
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-primary" />
-                Completed Items ({completedItems.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-primary" />
+              Completed Items <span className="ml-2 text-xs text-muted-foreground">({completedItems.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {completedItems.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No completed items yet.</p>
+            ) : (
               <div className="space-y-3">
                 {completedItems.map((item) => (
                   <div
                     key={item._id}
-                    className="flex items-center gap-4 p-4 bg-secondary/20 rounded-lg opacity-60"
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-secondary/20 rounded-lg opacity-60"
                   >
-                    <Checkbox
-                      checked={item.isCompleted}
-                      onCheckedChange={() => toggleItem(item._id)}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium line-through">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Qty: {item.quantity} • Added: {item.addedDate}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={item.isCompleted}
+                        onCheckedChange={() => toggleItem(item._id)}
+                      />
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteItem(item._id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex-1 w-full">
+                      <h4 className="font-medium text-lg line-through">{item.name}</h4>
+                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
+                        <span>Qty: {item.quantity}</span>
+                        <span>Price: ${item.price}</span>
+                        <span>Category: {item.category}</span>
+                        <span>Added: {item.addedDate}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteItem(item._id)}
+                        className="text-destructive hover:text-destructive w-full sm:w-auto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      {/* Sidebar - Summary & Actions */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span>Total Items:</span>
-              <span className="font-bold text-primary">{items.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Pending:</span>
-              <span className="font-bold text-orange-400">{pendingItems.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Completed:</span>
-              <span className="font-bold text-green-400">{completedItems.length}</span>
-            </div>
-            {pendingItems.length > 0 && (
-              <div className="pt-4 border-t border-border">
-                <h4 className="font-medium mb-2">Next to Buy:</h4>
-                <div className="space-y-1 text-sm">
-                  {pendingItems.slice(0, 3).map((item) => (
-                    <div key={item._id} className="flex justify-between">
-                      <span className="truncate mr-2">{item.name}</span>
-                      <span className="text-primary">x{item.quantity}</span>
-                    </div>
-                  ))}
-                  {pendingItems.length > 3 && (
-                    <p className="text-muted-foreground">
-                      +{pendingItems.length - 3} more items
-                    </p>
-                  )}
-                </div>
-              </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
-      <Button onClick={downloadPDF} variant="neon" className="w-full">
-        <Download className="h-4 w-4 mr-2" />
-        Download PDF
-      </Button>
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={async () => {
-          const completed = items.filter((item) => item.isCompleted);
-          if (completed.length > 0) {
-            for (const item of completed) {
-              await deleteItem(item._id);
-            }
-            toast({
-              title: "Cleared completed items",
-              description: `Removed ${completed.length} completed items`,
-            });
-          }
-        }}
-      >
-        Clear Completed
-      </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
