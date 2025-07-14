@@ -157,7 +157,7 @@ export default function BuyList() {
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Buy List</h1>
+          <h1 className="text-3xl font-bold">CompCart</h1>
           <p className="text-muted-foreground">Manage components you need to purchase</p>
         </div>
         <Button onClick={downloadPDF} variant="neon" className="w-full md:w-auto mt-4 md:mt-0">
