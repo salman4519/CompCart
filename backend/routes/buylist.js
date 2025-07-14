@@ -14,15 +14,20 @@ router.get('/', async (req, res) => {
 
 // Create a new buy list item
 router.post('/', async (req, res) => {
+
   try {
-    const { name, quantity, isCompleted, addedDate } = req.body;
-    const item = new BuyListItem({ name, quantity, isCompleted, addedDate });
+    console.log("started")
+    const { name, quantity, project, isCompleted, addedDate } = req.body;
+    console.log("items"+req.body)
+    const item = new BuyListItem({ name, quantity, project, isCompleted, addedDate });
     await item.save();
     res.status(201).json(item);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
+
 
 // Get a single buy list item
 router.get('/:id', async (req, res) => {
@@ -38,10 +43,10 @@ router.get('/:id', async (req, res) => {
 // Update a buy list item
 router.put('/:id', async (req, res) => {
   try {
-    const { name, quantity, isCompleted, addedDate } = req.body;
+    const { name, quantity, project, isCompleted, addedDate } = req.body;
     const item = await BuyListItem.findByIdAndUpdate(
       req.params.id,
-      { name, quantity, isCompleted, addedDate },
+      { name, quantity, project, isCompleted, addedDate },
       { new: true }
     );
     if (!item) return res.status(404).json({ error: 'Not found' });

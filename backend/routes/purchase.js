@@ -1,6 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const Purchase = require('../models/Purchase');
+const multer = require('multer');
+const path = require('path');
+
+// Set up storage for multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
 
 // Get all purchases
 router.get('/', async (req, res) => {
@@ -23,6 +36,14 @@ router.post('/', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// Upload bill file endpoint
+router.post('/upload-bill', upload.single('bill'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  res.json({ filename: req.file.filename });
 });
 
 // Get a single purchase

@@ -10,18 +10,16 @@ import { Label } from "@/components/ui/label";
 interface BuyListItem {
   _id: string;
   name: string;
-  quantity: number;
-  price: number;
-  category: string;
+  quantity: string;
+  project: string;
   isCompleted: boolean;
   addedDate: string;
 }
 
 export default function BuyList() {
   const [newItemName, setNewItemName] = useState("");
-  const [newItemQuantity, setNewItemQuantity] = useState(1);
-  const [newItemPrice, setNewItemPrice] = useState(0);
-  const [newItemCategory, setNewItemCategory] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState("");
+  const [newItemProject, setNewItemProject] = useState("");
   const [items, setItems] = useState<BuyListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +57,7 @@ export default function BuyList() {
         body: JSON.stringify({
           name: newItemName.trim(),
           quantity: newItemQuantity,
-          price: newItemPrice,
-          category: newItemCategory,
+          project: newItemProject,
           isCompleted: false,
           addedDate: new Date().toISOString().split("T")[0],
         }),
@@ -69,9 +66,8 @@ export default function BuyList() {
       const newItem = await res.json();
       setItems([newItem, ...items]);
       setNewItemName("");
-      setNewItemQuantity(1);
-      setNewItemPrice(0);
-      setNewItemCategory("");
+      setNewItemQuantity("");
+      setNewItemProject("");
       toast({ title: "Item added", description: `${newItem.name} added to buy list` });
     } catch {
       toast({ title: "Error", description: "Failed to add item", variant: "destructive" });
@@ -124,8 +120,8 @@ export default function BuyList() {
           items: [{
             name: item.name,
             quantity: item.quantity,
-            price: item.price,
-            category: item.category,
+
+            category: item.project,
           }],
           totalItems: item.quantity,
         }),
@@ -179,7 +175,7 @@ export default function BuyList() {
             className="flex flex-col gap-2"
             onSubmit={e => { e.preventDefault(); addItem(); }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="name-input">Name</Label>
                 <Input
@@ -195,36 +191,23 @@ export default function BuyList() {
                 <Input
                   id="quantity-input"
                   className="w-full"
-                  type="number"
-                  min="1"
+                  type="text"
                   value={newItemQuantity}
-                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setNewItemQuantity(e.target.value)}
                   placeholder="Qty"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="price-input">Price</Label>
+                <Label htmlFor="project-input">Project</Label>
                 <Input
-                  id="price-input"
-                  className="w-full"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Price"
-                  value={newItemPrice}
-                  onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="category-input">Category</Label>
-                <Input
-                  id="category-input"
-                  className="w-full"
-                  type="text"
-                  placeholder="Category"
-                  value={newItemCategory}
-                  onChange={(e) => setNewItemCategory(e.target.value)}
-                />
+    id="project-input"
+    className="w-full"
+    type="text"
+    placeholder="Project"
+    value={newItemProject}
+    onChange={(e) => setNewItemProject(e.target.value)}
+    required
+  />
               </div>
             </div>
             <Button type="submit" variant="neon" className="w-full md:w-auto mt-2 md:mt-0">
@@ -264,8 +247,7 @@ export default function BuyList() {
                       <h4 className="font-medium text-lg">{item.name}</h4>
                       <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
                         <span>Qty: {item.quantity}</span>
-                        <span>Price: ${item.price}</span>
-                        <span>Category: {item.category}</span>
+                        <span >Project: {item.project}</span>
                         <span>Added: {item.addedDate}</span>
                       </div>
                     </div>
@@ -273,11 +255,11 @@ export default function BuyList() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => markAsBought(item)}
+                        onClick={() => toggleItem(item._id)}
                         className="text-primary hover:text-primary w-full sm:w-auto"
                       >
                         <Check className="h-4 w-4 mr-1" />
-                        Bought
+                        {item.isCompleted ? "Completed" : "Mark as Completed"}
                       </Button>
                       <Button
                         size="sm"
@@ -324,8 +306,7 @@ export default function BuyList() {
                       <h4 className="font-medium text-lg line-through">{item.name}</h4>
                       <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
                         <span>Qty: {item.quantity}</span>
-                        <span>Price: ${item.price}</span>
-                        <span>Category: {item.category}</span>
+                        {item.project && <span className="break-all">Project: {item.project}</span>}
                         <span>Added: {item.addedDate}</span>
                       </div>
                     </div>

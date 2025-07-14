@@ -61,7 +61,7 @@ export default function Reports() {
         </Card>
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+            <CardTitle className="text-sm font-medium">Projects</CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -120,30 +120,24 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* Category Breakdown */}
+        {/* Project Breakdown */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Component Categories
+              Project Breakdown
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.categoryBreakdown.map((category, index) => (
-                <div key={category.category} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{category.category}</span>
-                    <span className="text-sm text-primary">{category.count}</span>
-                  </div>
-                  <div className="bg-secondary rounded-full h-2">
-                    <div
-                      className="h-2 bg-gradient-primary rounded-full transition-all duration-500"
-                      style={{ width: `${category.count / (data.totalPurchases || 1) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+              <h2>Project Breakdown</h2>
+              <ul>
+                {data.categoryBreakdown.map((proj) => (
+                  <li key={proj.category}>
+                    {proj.category}: {proj.count}
+                  </li>
+                ))}
+              </ul>
             </div>
           </CardContent>
         </Card>

@@ -11,7 +11,7 @@ import { PurchaseForm, PurchaseItem } from "@/components/ui/PurchaseForm";
 interface Purchase {
   _id: string;
   date: string;
-  items: Array<{ name: string; quantity: number }>;
+  items: Array<{ name: string; quantity: number; price?: string; project?: string }>;
   billFile?: string;
   totalItems: number;
 }
@@ -63,10 +63,17 @@ export default function AdminPanel() {
   };
 
   const viewBill = (purchase: Purchase) => {
-    toast({ title: "Opening bill", description: `Opening ${purchase.billFile}` });
+    if (purchase.billFile) {
+      // If billFile is a full URL, use it directly. Otherwise, prepend the API URL and /uploads/
+      const isFullUrl = purchase.billFile.startsWith('http://') || purchase.billFile.startsWith('https://');
+      const billUrl = isFullUrl
+        ? purchase.billFile
+        : `${API_URL}/uploads/${purchase.billFile}`;
+      window.open(billUrl, '_blank');
+    }
   };
 
-  const handleSavePurchase = async (purchase: { date: string; items: PurchaseItem[]; billFile?: File | null }) => {
+  const handleSavePurchase = async (purchase: { date: string; items: PurchaseItem[]; billFile?: string | null }) => {
     try {
       const res = await fetch(`${API_URL}/api/purchases`, {
         method: "POST",
@@ -74,7 +81,7 @@ export default function AdminPanel() {
         body: JSON.stringify({
           date: purchase.date,
           items: purchase.items,
-          billFile: purchase.billFile ? purchase.billFile.name : undefined,
+          billFile: purchase.billFile || undefined,
         }),
       });
       if (!res.ok) throw new Error();
@@ -130,7 +137,7 @@ export default function AdminPanel() {
             <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
               <Lock className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">compCart</CardTitle>
+            <CardTitle className="text-2xl">Admin Panel</CardTitle>
             <p className="text-muted-foreground">Please login to access purchase data</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -242,7 +249,10 @@ export default function AdminPanel() {
                         {purchase.items.map((item, index) => (
                           <div key={index} className="flex justify-between items-center p-2 bg-secondary/30 rounded">
                             <span className="text-sm">{item.name}</span>
-                            <span className="text-sm font-medium text-primary">x{item.quantity}</span>
+                            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
+                              <span>Qty: {item.quantity}</span>
+                              {item.project && <span>Project: {item.project}</span>}
+                            </div>
                           </div>
                         ))}
                       </div>
