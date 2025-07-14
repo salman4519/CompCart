@@ -153,7 +153,7 @@ export default function AdminPanel() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">compCart</h1>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
           <p className="text-muted-foreground">View and manage all purchase records</p>
         </div>
         <Button onClick={handleLogout} variant="outline">Logout</Button>
