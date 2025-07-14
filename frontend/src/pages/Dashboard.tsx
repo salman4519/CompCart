@@ -27,11 +27,13 @@ export default function Dashboard() {
   const [buyList, setBuyList] = useState<BuyListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch("/api/purchases").then((res) => res.json()),
-      fetch("/api/buylist").then((res) => res.json()),
+      fetch(`${API_URL}/api/purchases`).then((res) => res.json()),
+      fetch(`${API_URL}/api/buylist`).then((res) => res.json()),
     ])
       .then(([purchasesData, buyListData]) => {
         setPurchases(purchasesData);

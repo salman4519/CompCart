@@ -26,11 +26,12 @@ export default function AdminPanel() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Fetch purchases on mount
   useEffect(() => {
     setLoading(true);
-    fetch("/api/purchases")
+    fetch(`${API_URL}/api/purchases`)
       .then((res) => res.json())
       .then((data) => {
         setPurchases(data);
@@ -67,7 +68,7 @@ export default function AdminPanel() {
 
   const handleSavePurchase = async (purchase: { date: string; items: PurchaseItem[]; billFile?: File | null }) => {
     try {
-      const res = await fetch("/api/purchases", {
+      const res = await fetch(`${API_URL}/api/purchases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -88,7 +89,7 @@ export default function AdminPanel() {
   // Add update and delete functionality for purchases
   const handleUpdatePurchase = async (id: string, updatedPurchase: Partial<Purchase>) => {
     try {
-      const res = await fetch(`/api/purchases/${id}`, {
+      const res = await fetch(`${API_URL}/api/purchases/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedPurchase),
@@ -104,7 +105,7 @@ export default function AdminPanel() {
 
   const handleDeletePurchase = async (id: string) => {
     try {
-      const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/api/purchases/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setPurchases(purchases.filter((p) => p._id !== id));
       toast({ title: "Purchase deleted", description: "Purchase removed from records." });

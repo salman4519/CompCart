@@ -26,10 +26,12 @@ export default function BuyList() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   // Fetch items on mount
   useEffect(() => {
     setLoading(true);
-    fetch("/api/buylist")
+    fetch(`${API_URL}/api/buylist`)
       .then((res) => res.json())
       .then((data) => {
         setItems(data);
@@ -51,7 +53,7 @@ export default function BuyList() {
       return;
     }
     try {
-      const res = await fetch("/api/buylist", {
+      const res = await fetch(`${API_URL}/api/buylist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -80,7 +82,7 @@ export default function BuyList() {
     const item = items.find((i) => i._id === id);
     if (!item) return;
     try {
-      const res = await fetch(`/api/buylist/${id}`, {
+      const res = await fetch(`${API_URL}/api/buylist/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...item, isCompleted: !item.isCompleted }),
@@ -95,7 +97,7 @@ export default function BuyList() {
 
   const deleteItem = async (id: string) => {
     try {
-      const res = await fetch(`/api/buylist/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/api/buylist/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setItems(items.filter((i) => i._id !== id));
       toast({ title: "Item removed", description: "Item deleted from buy list" });
@@ -114,7 +116,7 @@ export default function BuyList() {
   const markAsBought = async (item: BuyListItem) => {
     try {
       // 1. Create a new purchase
-      const res = await fetch("/api/purchases", {
+      const res = await fetch(`${API_URL}/api/purchases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
