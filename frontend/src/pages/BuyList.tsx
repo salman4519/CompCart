@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Download, Check, ShoppingCart } from "lucide-react";
+import { Plus, Trash2, Check, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 
 interface BuyListItem {
   _id: string;
   name: string;
-  quantity: string;
+  quantity: number;
   project: string;
   isCompleted: boolean;
   addedDate: string;
@@ -18,13 +19,14 @@ interface BuyListItem {
 
 export default function BuyList() {
   const [newItemName, setNewItemName] = useState("");
-  const [newItemQuantity, setNewItemQuantity] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState<string>("");
   const [newItemProject, setNewItemProject] = useState("");
   const [items, setItems] = useState<BuyListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const API_URL = import.meta.env.VITE_API_URL;
+  const [projects, setProjects] = useState<{ _id: string; name: string }[]>([]); // New state for projects
 
   // Fetch items on mount
   useEffect(() => {
@@ -39,6 +41,17 @@ export default function BuyList() {
         setError("Failed to load buy list");
         setLoading(false);
       });
+
+    // Fetch projects
+    fetch(`${API_URL}/api/projects`)
+      .then((res) => res.json())
+      .then((data) => {
+        setProjects(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load projects:", err);
+        toast({ title: "Error", description: "Failed to load projects", variant: "destructive" });
+      });
   }, []);
 
   const addItem = async () => {
@@ -50,13 +63,21 @@ export default function BuyList() {
       });
       return;
     }
+    if (newItemProject.trim() === "") { // Added validation for project
+      toast({
+        title: "Error",
+        description: "Please select or enter a project",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/api/buylist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newItemName.trim(),
-          quantity: newItemQuantity,
+          quantity: Number(newItemQuantity), // Ensure quantity is a number
           project: newItemProject,
           isCompleted: false,
           addedDate: new Date().toISOString().split("T")[0],
@@ -102,10 +123,6 @@ export default function BuyList() {
     }
   };
 
-  const downloadPDF = () => {
-    toast({ title: "PDF Generated", description: "Buy list downloaded successfully" });
-  };
-
   const pendingItems = items.filter((item) => !item.isCompleted);
   const completedItems = items.filter((item) => item.isCompleted);
 
@@ -119,11 +136,12 @@ export default function BuyList() {
           date: new Date().toISOString().split("T")[0],
           items: [{
             name: item.name,
-            quantity: item.quantity,
+            quantity: Number(item.quantity),
 
             category: item.project,
           }],
-          totalItems: item.quantity,
+          totalItems: Number(item.quantity),
+          price: 0, // Set price to 0 as it's not collected from buylist
         }),
       });
       if (!res.ok) throw new Error("Failed to add to purchases");
@@ -136,10 +154,10 @@ export default function BuyList() {
         title: "Marked as bought",
         description: `${item.name} moved to purchases`,
       });
-    } catch {
+    } catch(err: any) { // Added error handling to check for project presence
       toast({
         title: "Error",
-        description: "Failed to mark as bought",
+        description: `Failed to mark as bought: ${err.message}`,
         variant: "destructive",
       });
     }
@@ -156,10 +174,6 @@ export default function BuyList() {
           <h1 className="text-3xl font-bold">CompCart</h1>
           <p className="text-muted-foreground">Manage components you need to purchase</p>
         </div>
-        <Button onClick={downloadPDF} variant="neon" className="w-full md:w-auto mt-4 md:mt-0">
-          <Download className="h-4 w-4 mr-2" />
-          Download PDF
-        </Button>
       </div>
 
       {/* Add New Item */}
@@ -191,7 +205,7 @@ export default function BuyList() {
                 <Input
                   id="quantity-input"
                   className="w-full"
-                  type="text"
+                  type="number"
                   value={newItemQuantity}
                   onChange={(e) => setNewItemQuantity(e.target.value)}
                   placeholder="Qty"
@@ -199,20 +213,23 @@ export default function BuyList() {
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="project-input">Project</Label>
-                <Input
-    id="project-input"
-    className="w-full"
-    type="text"
-    placeholder="Project"
-    value={newItemProject}
-    onChange={(e) => setNewItemProject(e.target.value)}
-    required
-  />
+                <Select onValueChange={setNewItemProject} value={newItemProject}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project._id} value={project.name}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <Button type="submit" variant="neon" className="w-full md:w-auto mt-2 md:mt-0">
-              <Plus className="h-4 w-4" />
-              Add
+            <Button type="submit" variant="neon" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item to Buy List
             </Button>
           </form>
         </CardContent>

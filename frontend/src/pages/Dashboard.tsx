@@ -4,13 +4,18 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'; // Added PieChart, Pie, Cell, Legend
 
 interface Purchase {
   _id: string;
   date: string;
-  items: Array<{ name: string; quantity: number }>;
+  items: Array<{ name: string; quantity: number; price?: number; project?: string }>;
   billFile?: string;
   totalItems: number;
+}
+
+interface PurchaseWithProject extends Purchase {
+  items: Array<{ name: string; quantity: number; price?: number; project?: string }>;
 }
 
 interface BuyListItem {
@@ -53,12 +58,60 @@ export default function Dashboard() {
   const pendingItems = buyList.filter((item) => !item.isCompleted).length;
   const lastPurchase = purchases.length > 0 ? purchases[0] : null;
 
+  // Calculate total spent by project
+  const totalSpentByProject = purchases.reduce((acc: Record<string, number>, purchase) => {
+    purchase.items.forEach(item => {
+      if (item.project && item.price !== undefined) {
+        acc[item.project] = (acc[item.project] || 0) + item.price;
+      }
+    });
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Convert to array for rendering
+  const projectSpendingList = Object.entries(totalSpentByProject).map(([project, spent]) => ({
+    project, spent: Number(spent) // Ensure 'spent' is a number
+  }));
+
   // Recent activity: last 4 purchases
   const recentActivity = purchases.slice(0, 4).map((p) => ({
     date: p.date,
     item: p.items[0]?.name || "-",
     quantity: p.items[0]?.quantity || 0,
   }));
+
+  // Prepare data for charts
+  const monthlyChartData = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(i);
+    return {
+      month: date.toLocaleString('default', { month: 'short' }),
+      totalItems: 0,
+    };
+  });
+
+  purchases.forEach(p => {
+    const d = new Date(p.date);
+    const monthIndex = d.getMonth();
+    if (monthlyChartData[monthIndex]) {
+      monthlyChartData[monthIndex].totalItems += p.totalItems;
+    }
+  });
+
+  const projectChartDataMap = new Map<string, number>();
+  purchases.forEach(p => {
+    p.items.forEach(item => {
+      const projectName = item.project || "Uncategorized";
+      projectChartDataMap.set(projectName, (projectChartDataMap.get(projectName) || 0) + item.quantity);
+    });
+  });
+  const projectChartData = Array.from(projectChartDataMap.entries()).map(([name, quantity]) => ({
+    name,
+    quantity,
+    value: quantity, // Add value for PieChart
+  }));
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6F61', '#6B5B95', '#88B04B']; // Colors for PieChart
 
   const quickActions = [
     {
@@ -129,6 +182,26 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Project Spending Summary */}
+      <h2 className="text-2xl font-semibold mb-6">Project Spending Summary</h2>
+      <Card className="glass-card">
+        <CardContent className="p-6">
+          {projectSpendingList.length === 0 ? (
+            <p className="text-muted-foreground">No project spending to display.</p>
+          ) : (
+            <div className="space-y-3">
+              {projectSpendingList.map(({ project, spent }) => (
+                <div key={project} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
+                  <span className="font-medium">{project}</span>
+                  <span className="text-primary font-bold">₹{spent.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <h2 className="text-2xl font-semibold mb-6">Quick Actions</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -148,7 +221,64 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
-      {/* Recent Activity */}
+
+      {/* Monthly Purchase Chart */}
+      <h2 className="text-2xl font-semibold mb-6">Monthly Purchases</h2>
+      <Card className="glass-card">
+        <CardContent className="p-6">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground) / 0.2)" />
+              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <Tooltip
+                cursor={{ fill: 'hsl(var(--primary) / 0.2)' }}
+                formatter={(value: number) => [`${value} items`, 'Total']}
+                labelFormatter={(label: string) => `Month: ${label}`}
+                contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                itemStyle={{ color: 'hsl(var(--primary))' }}
+              />
+              <Bar dataKey="totalItems" fill="hsl(var(--primary))" barSize={20} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Project Purchase Chart */}
+      <h2 className="text-2xl font-semibold mb-6">Purchases by Project</h2>
+      <Card className="glass-card">
+        <CardContent className="p-6">
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={projectChartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                fill="#8884d8"
+                label
+              >
+                {projectChartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value: number, name: string) => [`${value} items`, `Project: ${name}`]}
+                contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                itemStyle={{ color: 'hsl(var(--primary))' }}
+              />
+              <Legend layout="vertical" align="right" verticalAlign="middle" />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Removed Recent Activity Section */}
+      {/*
       <Card className="glass-card">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
@@ -171,6 +301,7 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+      */}
     </div>
   );
 }

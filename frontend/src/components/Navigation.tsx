@@ -6,7 +6,7 @@ import {
   Shield, 
   BarChart3,
   Menu,
-  Lock
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

@@ -7,6 +7,7 @@ const path = require('path');
 const purchaseRoutes = require('./routes/purchase');
 const buyListRoutes = require('./routes/buylist');
 const reportsRoutes = require('./routes/reports');
+const projectsRoutes = require('./routes/projects');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -18,6 +19,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/buylist', buyListRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/projects', projectsRoutes);
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,

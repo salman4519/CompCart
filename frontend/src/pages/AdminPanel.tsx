@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lock, Calendar, Download, Eye, Search } from "lucide-react";
+import { Lock, Calendar, Plus, Trash2, Download, Eye, Search } from "lucide-react"; // Added Download, Eye, Search
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,37 +11,101 @@ import { PurchaseForm, PurchaseItem } from "@/components/ui/PurchaseForm";
 interface Purchase {
   _id: string;
   date: string;
-  items: Array<{ name: string; quantity: number; price?: string; project?: string }>;
+  items: Array<{ name: string; quantity: number; price?: number; project?: string }>;
   billFile?: string;
   totalItems: number;
+}
+
+interface Project {
+  _id: string;
+  name: string;
+  // startDate: string; // Removed
 }
 
 export default function AdminPanel() {
   const { isAdmin, login, logout } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Fetch purchases on mount
+  // Purchase-related States
+  const [purchases, setPurchases] = useState<Purchase[]>([]); // Re-added
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Re-added
+  const [searchQuery, setSearchQuery] = useState(""); // Re-added
+  const [loading, setLoading] = useState(true); // Re-added
+  const [error, setError] = useState<string | null>(null); // Re-added
+
+  // Project Management States
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [newProjectName, setNewProjectName] = useState('');
+  // const [newProjectStartDate, setNewProjectStartDate] = useState(''); // Removed
+
   useEffect(() => {
+    if (isAdmin) {
+      fetchProjects();
+      fetchPurchases(); // Call fetch purchases when admin is logged in
+    }
+  }, [isAdmin]);
+
+  const fetchPurchases = async () => { // Re-added
     setLoading(true);
-    fetch(`${API_URL}/api/purchases`)
-      .then((res) => res.json())
-      .then((data) => {
-        setPurchases(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load purchases");
-        setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/api/purchases`);
+      if (!res.ok) throw new Error('Failed to load purchases');
+      const data = await res.json();
+      setPurchases(data);
+    } catch (err: any) {
+      setError(err.message);
+      toast({ title: 'Error', description: `Failed to load purchases: ${err.message}`, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/projects`);
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const data = await res.json();
+      setProjects(data);
+    } catch (err: any) {
+      toast({ title: 'Error', description: `Failed to load projects: ${err.message}`, variant: 'destructive' });
+    }
+  };
+
+  const addProject = async () => {
+    if (newProjectName.trim() === '' /* || newProjectStartDate.trim() === '' */) { // Removed date check
+      toast({ title: 'Error', description: 'Please enter project name', variant: 'destructive' }); // Updated message
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newProjectName.trim() /* , startDate: newProjectStartDate */ }), // Removed startDate
       });
-  }, []);
+      if (!res.ok) throw new Error('Failed to add project');
+      const newProject = await res.json();
+      setProjects([...projects, newProject]);
+      setNewProjectName('');
+      // setNewProjectStartDate(''); // Removed
+      toast({ title: 'Project Added', description: `${newProject.name} added successfully` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: `Failed to add project: ${err.message}`, variant: 'destructive' });
+    }
+  };
+
+  const deleteProject = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/projects/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete project');
+      setProjects(projects.filter(proj => proj._id !== id));
+      toast({ title: 'Project Deleted', description: 'Project removed successfully' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: `Failed to delete project: ${err.message}`, variant: 'destructive' });
+    }
+  };
 
   const handleLogin = () => {
     if (login(email, password)) {
@@ -58,21 +122,6 @@ export default function AdminPanel() {
     toast({ title: "Logged out", description: "You have been logged out successfully" });
   };
 
-  const downloadReport = (purchase: Purchase) => {
-    toast({ title: "Download started", description: `Downloading report for ${purchase.date}` });
-  };
-
-  const viewBill = (purchase: Purchase) => {
-    if (purchase.billFile) {
-      // If billFile is a full URL, use it directly. Otherwise, prepend the API URL and /uploads/
-      const isFullUrl = purchase.billFile.startsWith('http://') || purchase.billFile.startsWith('https://');
-      const billUrl = isFullUrl
-        ? purchase.billFile
-        : `${API_URL}/uploads/${purchase.billFile}`;
-      window.open(billUrl, '_blank');
-    }
-  };
-
   const handleSavePurchase = async (purchase: { date: string; items: PurchaseItem[]; billFile?: string | null }) => {
     try {
       const res = await fetch(`${API_URL}/api/purchases`, {
@@ -86,31 +135,14 @@ export default function AdminPanel() {
       });
       if (!res.ok) throw new Error();
       const newPurchase = await res.json();
-      setPurchases([newPurchase, ...purchases]);
+      setPurchases([newPurchase, ...purchases]); // Now update local state
       toast({ title: "Purchase saved", description: `Saved ${purchase.items.length} items for ${purchase.date}` });
     } catch {
       toast({ title: "Error", description: "Failed to save purchase", variant: "destructive" });
     }
   };
 
-  // Add update and delete functionality for purchases
-  const handleUpdatePurchase = async (id: string, updatedPurchase: Partial<Purchase>) => {
-    try {
-      const res = await fetch(`${API_URL}/api/purchases/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedPurchase),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      setPurchases(purchases.map((p) => (p._id === id ? updated : p)));
-      toast({ title: "Purchase updated", description: `Purchase for ${updated.date} updated.` });
-    } catch {
-      toast({ title: "Error", description: "Failed to update purchase", variant: "destructive" });
-    }
-  };
-
-  const handleDeletePurchase = async (id: string) => {
+  const handleDeletePurchase = async (id: string) => { // Re-added
     try {
       const res = await fetch(`${API_URL}/api/purchases/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
@@ -121,7 +153,17 @@ export default function AdminPanel() {
     }
   };
 
-  const filteredPurchases = purchases.filter((purchase) => {
+  const viewBill = (purchase: Purchase) => { // Re-added
+    if (purchase.billFile) {
+      const isFullUrl = purchase.billFile.startsWith('http://') || purchase.billFile.startsWith('https://');
+      const billUrl = isFullUrl
+        ? purchase.billFile
+        : `${API_URL}/uploads/${purchase.billFile}`;
+      window.open(billUrl, '_blank');
+    }
+  };
+
+  const filteredPurchases = purchases.filter((purchase) => { // Re-added
     const matchesDate = selectedDate ? purchase.date === selectedDate : true;
     const matchesSearch = searchQuery
       ? purchase.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -138,7 +180,7 @@ export default function AdminPanel() {
               <Lock className="h-8 w-8 text-primary" />
             </div>
             <CardTitle className="text-2xl">Admin Panel</CardTitle>
-            <p className="text-muted-foreground">Please login to access purchase data</p>
+            <p className="text-muted-foreground">Please login to access admin features</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -152,20 +194,18 @@ export default function AdminPanel() {
     );
   }
 
-  if (loading) return <div className="p-8 text-center">Loading purchases...</div>;
-  if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
-
   return (
     <div className="max-w-5xl mx-auto px-2 py-8 space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground">View and manage all purchase records</p>
+          <p className="text-muted-foreground">Manage purchases and projects</p>
         </div>
         <Button onClick={handleLogout} variant="outline">Logout</Button>
       </div>
-      {/* New Purchase Form */}
+
+      {/* Add New Purchase Form */}
       {isAdmin && (
         <Card className="glass-card">
           <CardHeader>
@@ -176,33 +216,98 @@ export default function AdminPanel() {
           </CardContent>
         </Card>
       )}
-      {/* Filters */}
+
+      {/* Project Management Section */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Add New Project
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={e => { e.preventDefault(); addProject(); }} className="flex flex-col md:flex-row gap-4">
+            <Input
+              type="text"
+              placeholder="Project Name"
+              value={newProjectName}
+              onChange={e => setNewProjectName(e.target.value)}
+              className="flex-1"
+            />
+            {/* Removed date input */}
+            {/*
+            <Input
+              type="date"
+              value={newProjectStartDate}
+              onChange={e => setNewProjectStartDate(e.target.value)}
+              className="w-auto"
+            />
+            */}
+            <Button type="submit" variant="neon">
+              Add Project
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Existing Projects ({projects.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {projects.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No projects added yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {projects.map(project => (
+                <div key={project._id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg animate-slide-in">
+                  <div>
+                    <h3 className="font-medium text-lg">{project.name}</h3>
+                    {/* Removed startDate display */}
+                    {/* <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Started: {project.startDate}</p> */}
+                  </div>
+                  <Button variant="destructive" size="sm" onClick={() => deleteProject(project._id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Filters for Purchases */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Filters for Purchases</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="date-filter">Select Date</Label>
-              <Input id="date-filter" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+              <Label htmlFor="purchase-date-filter">Select Date</Label>
+              <Input id="purchase-date-filter" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
             </div>
             <div>
-              <Label htmlFor="search-filter">Search Items</Label>
+              <Label htmlFor="purchase-search-filter">Search Items</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="search-filter" placeholder="Search by item name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+                <Input id="purchase-search-filter" placeholder="Search by item name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
       {/* Purchase Records */}
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-2xl font-semibold">Purchase Records ({filteredPurchases.length})</h2>
         </div>
-        {filteredPurchases.length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center">Loading purchases...</div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">{error}</div>
+        ) : filteredPurchases.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="text-center py-12">
               <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -227,11 +332,8 @@ export default function AdminPanel() {
                           View Bill
                         </Button>
                       )}
-                      <Button size="sm" onClick={() => downloadReport(purchase)} variant="neon">
-                        <Download className="h-4 w-4 mr-1" />
-                        Download PDF
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeletePurchase(purchase._id)} className="text-destructive hover:text-destructive">
+                      <Button size="sm" variant="destructive" onClick={() => handleDeletePurchase(purchase._id)}>
+                        <Trash2 className="h-4 w-4" />
                         Delete
                       </Button>
                     </div>
@@ -251,6 +353,7 @@ export default function AdminPanel() {
                             <span className="text-sm">{item.name}</span>
                             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mt-1">
                               <span>Qty: {item.quantity}</span>
+                              {item.price !== undefined && <span>Price: ₹{item.price.toFixed(2)}</span>} {/* Display item price */}
                               {item.project && <span>Project: {item.project}</span>}
                             </div>
                           </div>

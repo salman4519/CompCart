@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import BuyList from "./pages/BuyList";
 import AdminPanel from "./pages/AdminPanel";
 import Reports from "./pages/Reports";
+// import Projects from "./pages/Projects"; // Removed
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
                   <Route path="/buy-list" element={<BuyList />} />
                   <Route path="/admin" element={<AdminPanel />} />
                   <Route path="/reports" element={<Reports />} />
+                  {/* <Route path="/projects" element={<Projects />} /> Removed */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>

@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect } from 'react';
 
 export interface PurchaseItem {
   id: string;
   name: string;
-  quantity: string;
-  price: string;
+  quantity: number;
+  price: number;
   project: string;
 }
 
@@ -30,12 +32,29 @@ export function PurchaseForm({
     initialDate || new Date().toISOString().split('T')[0]
   );
   const [items, setItems] = useState<PurchaseItem[]>(
-    initialItems || [{ id: '1', name: '', quantity: '', price: '', project: '' }]
+    initialItems || [{ id: '1', name: '', quantity: 0, price: 0, project: '' }]
   );
   const [billFile, setBillFile] = useState<File | null>(null);
+  const [projects, setProjects] = useState<{ _id: string; name: string; }[]>([]); // State for projects
+
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/projects`);
+        if (!res.ok) throw new Error('Failed to fetch projects');
+        const data = await res.json();
+        setProjects(data);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+    fetchProjects();
+  }, [API_URL]);
 
   const addItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', quantity: '', price: '', project: '' }]);
+    setItems([...items, { id: Date.now().toString(), name: '', quantity: 0, price: 0, project: '' }]);
   };
 
   const removeItem = (id: string) => {
@@ -46,7 +65,7 @@ export function PurchaseForm({
 
   const updateItem = (id: string, field: keyof PurchaseItem, value: string) => {
     setItems(items.map(item =>
-      item.id === id ? { ...item, [field]: value } : item
+      item.id === id ? { ...item, [field]: (field === 'quantity' || field === 'price') ? parseFloat(value) : value } : item
     ));
   };
 
@@ -56,8 +75,6 @@ export function PurchaseForm({
       setBillFile(file);
     }
   };
-
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSave = async () => {
     const validItems = items.filter(item => item.name.trim() !== '');
@@ -133,7 +150,7 @@ export function PurchaseForm({
                   <Label htmlFor={`qty-${item.id}`}>Quantity</Label>
                   <Input
                     id={`qty-${item.id}`}
-                    type="text"
+                    type="number"
                     value={item.quantity}
                     onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                   />
@@ -142,19 +159,25 @@ export function PurchaseForm({
                   <Label htmlFor={`price-${item.id}`}>Price</Label>
                   <Input
                     id={`price-${item.id}`}
-                    type="text"
+                    type="number"
                     value={item.price}
                     onChange={(e) => updateItem(item.id, 'price', e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <Label htmlFor={`proj-${item.id}`}>Project</Label>
-                  <Input
-                    id={`proj-${item.id}`}
-                    type="text"
-                    value={item.project}
-                    onChange={(e) => updateItem(item.id, 'project', e.target.value)}
-                  />
+                  <Select onValueChange={(value) => updateItem(item.id, 'project', value)} value={item.project}>
+                    <SelectTrigger id={`proj-${item.id}`} className="w-full">
+                      <SelectValue placeholder="Select a project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map(project => (
+                        <SelectItem key={project._id} value={project.name}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-end">
                   <Button
@@ -266,4 +289,4 @@ export function PurchaseForm({
       </div>
     </div>
   );
-} 
+}
